@@ -6,10 +6,11 @@ import CameraInput from "@/lib/CameraInput";
 
 export default function UploaderPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const [file, setFile] = useState(null);
-  const [status, setStatus] = useState(null);
 
-  const handlePick = (f) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const handlePick = (f: File) => {
     setFile(f);
     setStatus(null);
   };
@@ -44,22 +45,24 @@ export default function UploaderPage() {
     }
   };
 
+  const accessToken =
+    (session as any)?.accessToken as string | undefined;
+
   return (
     <div className="min-h-screen flex flex-col gap-4 p-4 items-center justify-start">
-
       <h1 className="text-xl font-semibold mb-4">8ball Uploader</h1>
 
       {/* SESSION DEBUG BOX */}
       <div className="w-full max-w-xl p-4 border rounded bg-gray-50 text-sm text-gray-900">
-        <p><strong>Session Status:</strong> {sessionStatus}</p>
-        <p><strong>Email:</strong> {session?.user?.email ?? "(none)"}</p>
-
-        {/* Mask access token for security */}
+        <p>
+          <strong>Session Status:</strong> {sessionStatus}
+        </p>
+        <p>
+          <strong>Email:</strong> {session?.user?.email ?? "(none)"}
+        </p>
         <p>
           <strong>Access Token:</strong>{" "}
-          {session?.accessToken
-            ? session.accessToken.substring(0, 12) + "...(masked)"
-            : "(none)"}
+          {accessToken ? accessToken.substring(0, 12) + "...(masked)" : "(none)"}
         </p>
 
         <details className="mt-2">
@@ -67,7 +70,7 @@ export default function UploaderPage() {
             Show Full Session JSON
           </summary>
           <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto">
-{JSON.stringify(session, null, 2)}
+{JSON.stringify(session ?? {}, null, 2)}
           </pre>
         </details>
       </div>
