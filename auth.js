@@ -64,7 +64,7 @@ export const {
       }
 
       // expose access token on session for server-side routes
-      (session as any).accessToken = token.accessToken;
+      session.accessToken = token.accessToken;
 
       return session;
     },
