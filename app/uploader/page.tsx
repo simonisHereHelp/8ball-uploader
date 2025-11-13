@@ -1,14 +1,15 @@
-// app/uploader/page.tsx
 "use client";
 
 import { useState } from "react";
-import CameraInput from "@/lib/CameraInput"; // adjust path if needed
+import { useSession } from "next-auth/react";
+import CameraInput from "@/lib/CameraInput";
 
 export default function UploaderPage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const { data: session, status: sessionStatus } = useSession();
+  const [file, setFile] = useState(null);
+  const [status, setStatus] = useState(null);
 
-  const handlePick = (f: File) => {
+  const handlePick = (f) => {
     setFile(f);
     setStatus(null);
   };
@@ -30,7 +31,7 @@ export default function UploaderPage() {
       if (!res.ok) {
         const text = await res.text();
         console.error("Upload failed:", text);
-        setStatus("Upload failed");
+        setStatus("Upload failed: " + text);
         return;
       }
 
@@ -44,11 +45,37 @@ export default function UploaderPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
-      <h1 className="text-xl font-semibold">8ball Uploader</h1>
+    <div className="min-h-screen flex flex-col gap-4 p-4 items-center justify-start">
 
+      <h1 className="text-xl font-semibold mb-4">8ball Uploader</h1>
+
+      {/* SESSION DEBUG BOX */}
+      <div className="w-full max-w-xl p-4 border rounded bg-gray-50 text-sm text-gray-900">
+        <p><strong>Session Status:</strong> {sessionStatus}</p>
+        <p><strong>Email:</strong> {session?.user?.email ?? "(none)"}</p>
+
+        {/* Mask access token for security */}
+        <p>
+          <strong>Access Token:</strong>{" "}
+          {session?.accessToken
+            ? session.accessToken.substring(0, 12) + "...(masked)"
+            : "(none)"}
+        </p>
+
+        <details className="mt-2">
+          <summary className="cursor-pointer text-blue-600">
+            Show Full Session JSON
+          </summary>
+          <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto">
+{JSON.stringify(session, null, 2)}
+          </pre>
+        </details>
+      </div>
+
+      {/* CAMERA PICKER */}
       <CameraInput onPick={handlePick} />
 
+      {/* UPLOAD BUTTON */}
       <button
         onClick={handleUpload}
         disabled={!file}
@@ -57,7 +84,9 @@ export default function UploaderPage() {
         {file ? "Upload to Drive" : "Pick a photo first"}
       </button>
 
-      {status && <p className="text-sm text-zinc-700 dark:text-zinc-300">{status}</p>}
+      {status && (
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">{status}</p>
+      )}
     </div>
   );
 }
