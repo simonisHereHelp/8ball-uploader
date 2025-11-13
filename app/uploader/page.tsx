@@ -1,14 +1,43 @@
 "use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import CameraInput from "@/lib/CameraInput";
 
-export default function UploaderPage() {
-  const { data: session, status: sessionStatus } = useSession();
+type SessionInfo = {
+  user?: {
+    email?: string;
+    name?: string | null;
+    image?: string | null;
+  };
+  accessToken?: string;
+  [key: string]: any;
+};
 
+export default function UploaderPage() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const res = await fetch("/api/debug-session");
+        if (!res.ok) {
+          const text = await res.text();
+          setSessionError(`Failed to load session: ${text}`);
+          return;
+        }
+        const json = await res.json();
+        setSessionInfo(json);
+      } catch (err) {
+        console.error(err);
+        setSessionError("Error loading session");
+      }
+    };
+
+    loadSession();
+  }, []);
 
   const handlePick = (f: File) => {
     setFile(f);
@@ -45,8 +74,8 @@ export default function UploaderPage() {
     }
   };
 
-  const accessToken =
-    (session as any)?.accessToken as string | undefined;
+  const email = sessionInfo?.user?.email ?? "(none)";
+  const accessToken = sessionInfo?.accessToken as string | undefined;
 
   return (
     <div className="min-h-screen flex flex-col gap-4 p-4 items-center justify-start">
@@ -55,14 +84,21 @@ export default function UploaderPage() {
       {/* SESSION DEBUG BOX */}
       <div className="w-full max-w-xl p-4 border rounded bg-gray-50 text-sm text-gray-900">
         <p>
-          <strong>Session Status:</strong> {sessionStatus}
+          <strong>Session load:</strong>{" "}
+          {sessionError
+            ? `Error: ${sessionError}`
+            : sessionInfo
+            ? "OK"
+            : "Loading..."}
         </p>
         <p>
-          <strong>Email:</strong> {session?.user?.email ?? "(none)"}
+          <strong>Email:</strong> {email}
         </p>
         <p>
           <strong>Access Token:</strong>{" "}
-          {accessToken ? accessToken.substring(0, 12) + "...(masked)" : "(none)"}
+          {accessToken
+            ? accessToken.substring(0, 12) + "...(masked)"
+            : "(none)"}
         </p>
 
         <details className="mt-2">
@@ -70,7 +106,7 @@ export default function UploaderPage() {
             Show Full Session JSON
           </summary>
           <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto">
-{JSON.stringify(session ?? {}, null, 2)}
+{JSON.stringify(sessionInfo ?? {}, null, 2)}
           </pre>
         </details>
       </div>
