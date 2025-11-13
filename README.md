@@ -26,3 +26,60 @@ cousin project of 8ball-fuma2
 
 OAuth:yes
 Email Gated: yes
+Upload to Google Drive: yes
+
+## Recent Works
+
+1. **Migration from 8ball-fuma2 → Clean Uploader**  
+   Removed all FumaDocs pages, docs routing, OG endpoints, and album viewers.  
+   Repo now contains only essential uploader routes and auth logic.
+
+2. **Google OAuth Setup**  
+   - Added correct redirect URI: `/api/auth/callback/google`  
+   - Enabled Drive scope: `https://www.googleapis.com/auth/drive.file`  
+   - Added `99.cent.bagel@gmail.com` as a Google OAuth test user.
+
+3. **NextAuth Configuration**  
+   - Converted to `auth.js` (plain JS).  
+   - Added Drive access token propagation:
+     - `token.accessToken = account.access_token`  
+     - `session.accessToken = token.accessToken`  
+   - Enforced single-account login via `signIn()` callback.
+
+4. **Middleware Cleanup**  
+   Replaced old `/docs` protections with `/uploader` gating.  
+   Now only the uploader route requires authentication and allowed email.
+
+5. **Session Debug Endpoint**  
+   Added `/api/debug-session` to inspect server-side `auth()` output.  
+   Uploader page now shows:
+   - Email  
+   - Masked Drive Access Token  
+   - Full session JSON  
+
+6. **Stable Upload Route**  
+   - Rewrote `/api/upload/route.js` with full `try/catch`  
+   - Removed `sharp` temporarily for stability  
+   - Avoided Node runtime crash (`File instanceof File`)  
+   - Ensures all paths return a `NextResponse`  
+   - Reliable multipart uploads to Google Drive
+
+7. **Successful Drive Upload**  
+   Flow now works correctly:  
+   Login → Session token → Pick photo → Upload → File stored in Drive.
+
+
+## Structure
+
+```
+app/
+  api/
+    upload/route.js          # Upload handler (stable)
+    debug-session/route.js   # Session inspection endpoint
+    auth/[...nextauth]/route.js
+  uploader/page.tsx          # Uploader UI + session info
+  page.tsx                   # Login redirect
+auth.js                      # NextAuth configuration
+middleware.ts                # Protects /uploader
+lib/CameraInput.js           # Mobile-friendly camera/file picker
+```
