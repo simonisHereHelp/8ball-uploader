@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import CameraInput from "@/components/CameraInput"; // adjust path if needed
+import CameraInput from "@/lib/CameraInput"; // adjust path if needed
 
 export default function UploaderPage() {
   const [file, setFile] = useState<File | null>(null);
