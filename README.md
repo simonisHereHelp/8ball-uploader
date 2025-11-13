@@ -21,3 +21,8 @@ cousin project of 8ball-fuma2
 |      |                                                                                      | Create new page, e.g. `app/uploader/page.tsx`, that imports `<InfiniteAlbum />` & `<InfiniteAlbumDrive />`. | You get a simple uploader/gallery screen without FumaDocs — basically a pure NextJS+SWR+Drive viewer.           |
 | 11   | Keep Google Drive env pattern unchanged                                              | Keep using `GOOGLE_DRIVE_API_KEY` and `GOOGLE_DRIVE_FOLDER_ID` as currently used in `album-drive` + `remote-page`. | 8ball-uploader can still read from the same Drive folder; later you’ll add upload endpoints to write into it.   |
 | 12   | (Later) Add **upload**-specific API routes                                           | Add e.g. `app/api/upload/route.ts` using Google REST or a service account; reuse auth info if needed.     | This becomes the core 8ball-uploader feature while everything else stays slim and Drive-focused.                |
+
+## progress:
+
+OAuth:yes
+Email Gated: yes
