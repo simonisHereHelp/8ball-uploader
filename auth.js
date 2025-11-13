@@ -2,14 +2,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
-/**
- * Centralized NextAuth configuration
- * - Uses Google OAuth only
- * - Enforces single account (99.cent.bagel@gmail.com)
- * - Shows account picker every time
- * - Uses JWT-based sessions (no DB adapter needed)
- */
-
 export const {
   handlers: { GET, POST },
   auth,
@@ -18,51 +10,49 @@ export const {
 } = NextAuth({
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "select_account", // always ask which Google account to use
+          prompt: "select_account",
+          access_type: "offline",  // get a refresh token on first consent
+          response_type: "code",
+          scope: [
+            "openid",
+            "profile",
+            "email",
+            "https://www.googleapis.com/auth/drive.file", // <– allow upload
+          ].join(" "),
         },
       },
     }),
   ],
 
-  // Use JWT session strategy for stateless deployment on Vercel
   session: { strategy: "jwt" },
-
-  // Required secret for signing cookies / JWTs
   secret: process.env.AUTH_SECRET,
 
-  /**
-   * Callbacks: control sign-in / JWT / session behaviors
-   */
   callbacks: {
-    /**
-     * signIn:
-     *  - return `true` to allow
-     *  - return URL string to redirect
-     */
-  async signIn({ user }) {
-    return user?.email === "99.cent.bagel@gmail.com";
+    async signIn({ user }) {
+      // still enforce single account
+      return user?.email === "99.cent.bagel@gmail.com";
     },
 
-    /**
-     * jwt: runs whenever a token is issued or updated.
-     * Optional: we just pass through here.
-     */
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      if (account) {
+        // store Drive-enabled access token
+        token.accessToken = account.access_token;
+        // (optional) token.refreshToken = account.refresh_token;
+      }
+
       if (user) {
         token.email = user.email;
         token.name = user.name;
         token.picture = user.image;
       }
+
       return token;
     },
 
-    /**
-     * session: adds email/name/image into the session object.
-     */
     async session({ session, token }) {
       if (token?.email) {
         session.user = {
@@ -72,6 +62,10 @@ export const {
           image: token.picture,
         };
       }
+
+      // expose access token on session for server-side routes
+      (session as any).accessToken = token.accessToken;
+
       return session;
     },
   },
