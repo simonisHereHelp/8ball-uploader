@@ -1,7 +1,8 @@
 // app/api/upload/route.js
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-
+import { uploadToDrive } from "@/lib/drive";
+import { saveMeta } from "../meta/utils";
 // If you don't use sharp now, you can remove runtime override.
 // export const runtime = "nodejs";
 
@@ -45,42 +46,23 @@ export async function POST(req) {
     const fileName = file.name || "upload";
 
     // 3) Build multipart body for Drive upload
-    const boundary = "drive-boundary-" + Date.now();
-    const metadata = {
+    const json = await uploadToDrive({
+      accessToken,
+      folderId,
       name: fileName,
-      parents: [folderId],
-    };
+          buffer,
+      mimeType,
+    });
 
-    const body = buildMultipartBody(boundary, metadata, buffer, mimeType);
+  const meta = await saveMeta({ accessToken, folderId, fileName });
 
-    // 4) Upload to Google Drive
-    const res = await fetch(
-      "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": `multipart/related; boundary=${boundary}`,
-        },
-        body,
-      }
-    );
 
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("Drive upload failed", res.status, text);
-      return new NextResponse("Drive upload failed: " + text, {
-        status: 500,
-      });
-    }
-
-    const json = await res.json();
-
-    return NextResponse.json({
+  return NextResponse.json({
       id: json.id,
       name: json.name,
       webViewLink: json.webViewLink,
       webContentLink: json.webContentLink,
+      meta,
     });
   } catch (err) {
     console.error("Upload route error", err);
@@ -90,26 +72,4 @@ export async function POST(req) {
         : String(err);
     return new NextResponse("Upload route error: " + msg, { status: 500 });
   }
-}
-
-function buildMultipartBody(boundary, metadata, fileBuffer, mimeType) {
-  const delimiter = `\r\n--${boundary}\r\n`;
-  const closeDelimiter = `\r\n--${boundary}--`;
-
-  const metaPart =
-    delimiter +
-    "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
-    JSON.stringify(metadata);
-
-  const filePartHeader =
-    delimiter + `Content-Type: ${mimeType}\r\n\r\n`;
-
-  const endPart = closeDelimiter;
-
-  return Buffer.concat([
-    Buffer.from(metaPart, "utf8"),
-    Buffer.from(filePartHeader, "utf8"),
-    fileBuffer,
-    Buffer.from(endPart, "utf8"),
-  ]);
 }
