@@ -83,3 +83,7 @@ auth.js                      # NextAuth configuration
 middleware.ts                # Protects /uploader
 lib/CameraInput.js           # Mobile-friendly camera/file picker
 ```
+
+## meta.json uploaded
+success!
+![alt text](./public/img/meta_uploaded.png)
