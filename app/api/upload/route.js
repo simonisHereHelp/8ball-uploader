@@ -1,75 +1,87 @@
-// app/api/upload/route.js
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { uploadToDrive } from "@/lib/drive";
-import { saveMeta } from "../meta/utils";
-// If you don't use sharp now, you can remove runtime override.
-// export const runtime = "nodejs";
+import { createChatCompletion } from "@/lib/openai";
 
-export async function POST(req) {
+// 1 — Google Drive BASE_INFO.json URL (DIRECT DOWNLOAD FORMAT)
+const BASE_INFO_URL =
+  "https://drive.google.com/uc?export=download&id=1XJ_7_asGEp9n4CKOP9savw8kzMAb-gB6";
+
+// 4 — NEW PROMPT
+const TAGGING_PROMPT = `
+You are a document tagging system.
+The uploaded image is a personal document.
+Your task is to use BASE_INFO as source reference to tag the image.
+Produce concise structured tags under 100 words.
+`.trim();
+
+// 1/3 — Fetch BASE_INFO.json from Drive
+async function fetchBaseInfo() {
   try {
-    // 1) Auth & email gate
-    const session = await auth();
+    const res = await fetch(BASE_INFO_URL);
 
-    if (!session || session.user?.email !== "99.cent.bagel@gmail.com") {
-      return new NextResponse("Unauthorized", { status: 401 });
+    if (!res.ok) {
+      console.error("BASE_INFO fetch error:", res.status);
+      return null;
     }
 
-    const accessToken = session.accessToken;
-    if (!accessToken) {
-      console.error("Upload: session has no accessToken", session);
-      return new NextResponse("Missing Drive access token on session", {
-        status: 500,
-      });
-    }
+    const jsonText = await res.text();
+    console.log("[BASE_INFO RAW]:", jsonText.slice(0, 300)); // 3—DISPLAY JSON (first 300 chars)
 
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-    if (!folderId) {
-      console.error("Upload: GOOGLE_DRIVE_FOLDER_ID is not set");
-      return new NextResponse("Missing GOOGLE_DRIVE_FOLDER_ID", {
-        status: 500,
-      });
-    }
-
-    // 2) Read file from form-data
-    const formData = await req.formData();
-    const file = formData.get("file");
-
-    // In Node runtime, `File` may not exist globally, so don't use `instanceof File`
-    if (!file || typeof file === "string") {
-      return new NextResponse("No file uploaded", { status: 400 });
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const mimeType = file.type || "application/octet-stream";
-    const fileName = file.name || "upload";
-
-    // 3) Build multipart body for Drive upload
-    const json = await uploadToDrive({
-      accessToken,
-      folderId,
-      name: fileName,
-          buffer,
-      mimeType,
-    });
-
-  const meta = await saveMeta({ accessToken, folderId, fileName });
-
-
-  return NextResponse.json({
-      id: json.id,
-      name: json.name,
-      webViewLink: json.webViewLink,
-      webContentLink: json.webContentLink,
-      meta,
-    });
+    return jsonText; // return as string for prompt embedding
   } catch (err) {
-    console.error("Upload route error", err);
-    const msg =
-      err && typeof err === "object" && "message" in err
-        ? err.message
-        : String(err);
-    return new NextResponse("Upload route error: " + msg, { status: 500 });
+    console.error("Failed to fetch BASE_INFO:", err);
+    return null;
   }
+}
+
+export async function saveMeta({ accessToken, folderId, fileName }) {
+  const baseName = fileName.replace(/\.[^./]+$/, "");
+  const metaName = `${baseName}_meta.json`;
+
+  // 1/3 — load BASE_INFO.json
+  const baseInfoText = await fetchBaseInfo();
+  if (!baseInfoText) {
+    console.warn("BASE_INFO missing; proceeding without it.");
+  }
+
+  // 4 — Build full user prompt
+  const userPrompt = `
+Tag the document image named "${fileName}".
+Use the BASE_INFO content below as the authoritative reference.
+
+BASE_INFO:
+${baseInfoText ?? "[Missing BASE_INFO]"}
+`.trim();
+
+  // 4 — Call OpenAI with new tagging prompt
+  const tags = await createChatCompletion(
+    [
+      { role: "system", content: TAGGING_PROMPT },
+      { role: "user", content: userPrompt },
+    ],
+    { maxTokens: 300, temperature: 0.2 }
+  );
+
+  // 5 — Construct meta.json
+  const metaJsonObject = {
+    uploadedAt: new Date().toISOString(),
+    prompt: TAGGING_PROMPT,
+    baseInfoIncluded: !!baseInfoText,
+    tags,
+  };
+
+  const metaBuffer = Buffer.from(JSON.stringify(metaJsonObject, null, 2));
+
+  // 5 — Upload to Google Drive
+  const metaJson = await uploadToDrive({
+    accessToken,
+    folderId,
+    name: metaName,
+    buffer: metaBuffer,
+    mimeType: "application/json",
+  });
+
+  return {
+    id: metaJson.id,
+    name: metaJson.name,
+  };
 }
