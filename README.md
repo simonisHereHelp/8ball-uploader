@@ -87,3 +87,9 @@ lib/CameraInput.js           # Mobile-friendly camera/file picker
 ## meta.json uploaded
 success!
 ![alt text](./public/img/meta_uploaded.png)
+
+**LLM tag** success
+tagged and save to Google Drive as backyard1_lamppost_mock_meta.json (50 words tag)
+```
+{"uploadedAt":"2025-11-21T15:28:36.613Z","prompt":"you are a image tagging agent. Tag this image with no more than 50 words.","tags":"- Backyard\n- Lamppost\n- Outdoor lighting\n- Garden\n- Pathway illumination\n- Evening ambiance\n- Landscape design\n- Residential area\n- Greenery\n- Decorative lighting\n- Warm glow\n- Tranquil setting\n- Home exterior\n- Urban garden\n- Nighttime scene"}
+```
