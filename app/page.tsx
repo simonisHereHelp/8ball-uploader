@@ -8,11 +8,11 @@ export default async function Home() {
   const session = await auth();
 
   if (!session) {
-    redirect("/api/auth/signin?callbackUrl=/uploader");
+    redirect("/api/auth/signin?callbackUrl=/textsniff");
   }
 
   if (session.user?.email === "99.cent.bagel@gmail.com") {
-    redirect("/uploader");
+    redirect("/textsniff");
   }
 
   // Wrong account UX
