@@ -23,7 +23,7 @@ export default async function Home() {
         <strong>99.cent.bagel@gmail.com</strong>.
       </p>
       <Link
-        href="/api/auth/signin?callbackUrl=/uploader"
+        href="/api/auth/signin?callbackUrl=/textsniff"
         className="rounded-md border border-zinc-400 px-4 py-2 text-base hover:bg-zinc-200 dark:border-zinc-600 dark:hover:bg-zinc-800"
       >
         Sign in with a different account
