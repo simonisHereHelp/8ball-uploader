@@ -9,11 +9,11 @@ export default auth((req) => {
 
   // Shared sign-in URL
   const signInUrl = new URL("/api/auth/signin", origin);
-  signInUrl.searchParams.set("callbackUrl", "/uploader");
+  signInUrl.searchParams.set("callbackUrl", "/textsniff");
 
   // 1) Protect /uploader and its subpaths
   const isUploaderPath =
-    pathname === "/uploader" || pathname.startsWith("/uploader/");
+    pathname === "/textsniff" || pathname.startsWith("/textsniff/");
 
   if (isUploaderPath && !isAllowed) {
     return NextResponse.redirect(signInUrl);
