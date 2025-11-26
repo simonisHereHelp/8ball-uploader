@@ -17,6 +17,15 @@ type SniffBox = {
   confidence: number;
 };
 
+type OcrLine = {
+  text?: string;
+  bbox: { x0: number; y0: number; x1: number; y1: number };
+  confidence: number;
+};
+
+const hasLines = (data: unknown): data is { lines: OcrLine[] } =>
+  Array.isArray((data as { lines?: unknown })?.lines);
+
 type FacingMode = "environment" | "user";
 
 export default function TextSniffPage() {
@@ -124,10 +133,12 @@ export default function TextSniffPage() {
         },
       });
 
-      const matchedLines: SniffBox[] = result.data.lines
+      const lines: OcrLine[] = hasLines(result.data) ? result.data.lines : [];
+
+      const matchedLines: SniffBox[] = lines
         .filter((line) => line.text && hotWordRegex.test(line.text))
         .map((line) => ({
-          text: line.text,
+          text: line.text ?? "",
           bbox: line.bbox,
           confidence: line.confidence,
         }));
